@@ -106,9 +106,12 @@ def print_custom_header(invoked_as: str, is_pro: bool):
     
     # Calculate padding needed to center title over the longer subtitle
     if subtitle_width > title_width:
-        padding_needed = (subtitle_width - title_width) // 2
-        # Add spaces to center the title
-        title_centered = " " * padding_needed + title
+        total_padding = subtitle_width - title_width
+        pad_left = total_padding // 2
+        pad_right = total_padding - pad_left
+        
+        # Add spaces to center the title and force exact width match
+        title_centered = (" " * pad_left) + title + (" " * pad_right)
     else:
         title_centered = title
     
