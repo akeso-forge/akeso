@@ -85,7 +85,7 @@ class AkesoFormatter:
         logs = result.get("logic_logs", [])
 
         # NEW: Issues Summary Table (Always visible if there are issues)
-        self._render_issues_summary(logs)
+        self._render_issues_summary(logs, status)
 
         # OLD: Audit Tree (Visible ONLY if verbose)
         if verbose:
@@ -110,7 +110,7 @@ class AkesoFormatter:
                     padding=(1, 2)
                 ))
 
-    def _render_issues_summary(self, logs: List[str]):
+    def _render_issues_summary(self, logs: List[str], status: str):
         """Renders a clean table of Warnings and Errors found in the logs."""
         issues = []
         for log in logs:
@@ -177,12 +177,24 @@ class AkesoFormatter:
              pass
 
         if any(i["rule"] == "GhostService" for i in issues):
-             console.print(Panel(
-                 f"Run [white]{invoked_as} heal <file>[/white] to automatically fix specific issues.",
-                 title="💡 SUGGESTION",
-                 border_style="green",
-                 expand=False
-             ))
+             # Context-Aware Suggestions
+             if status == "PREVIEW":
+                 # If we are in preview/scan and changes are possible -> Suggest Heal
+                 console.print(Panel(
+                     f"Run [white]{invoked_as} heal <file>[/white] to automatically fix detected issues.",
+                     title="💡 SUGGESTION",
+                     border_style="green",
+                     expand=False
+                 ))
+             elif status in ["HEALED", "UNCHANGED", "WARN"]:
+                 # If we already healed (or can't heal) -> Suggest Manual Action
+                 console.print(Panel(
+                     "Automated healing complete. Remaining issues require [bold]manual intervention[/bold].\n"
+                     "Check valid labels and ensure referenced deployments exist.",
+                     title="📝 MANUAL CHECK REQUIRED",
+                     border_style="yellow",
+                     expand=False
+                 ))
         console.print()
 
     def _render_staged_logs(self, logs: List[str], file_path: Optional[str] = None):
