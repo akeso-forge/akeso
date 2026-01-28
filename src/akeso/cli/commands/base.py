@@ -96,10 +96,10 @@ def print_custom_header(invoked_as: str, is_pro: bool):
     from rich.align import Align
     from rich import box
     
-    # Create aligned content using Table
-    header_table = Table(box=None, show_header=False, padding=(0, 1), expand=False)
-    header_table.add_column(justify="center")
-    header_table.add_row(f"[bold]{title}[/bold]")
+    # Create a table with fixed width based on subtitle
+    header_table = Table(box=None, show_header=False, padding=0, expand=False)
+    header_table.add_column(justify="left", width=len(subtitle))
+    header_table.add_row(Align.center(f"[bold]{title}[/bold]", width=len(subtitle)))
     header_table.add_row(f"[dim italic]{subtitle}[/dim italic]")
     
     console.print(Panel.fit(
