@@ -1,0 +1,35 @@
+# --- Akeso / Kubecuro Artifacts ---
+*.akeso.backup
+*.akeso.tmp
+*.kubecuro.backup
+*.kubecuro.tmp
+
+# --- Python Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Build & Distribution ---
+dist/
+build/
+*.spec
+.tmp
+.venv_build/
+*.egg-info/
+
+# --- Test Artifacts ---
+# We KEEP the tests folder, but ignore generated data inside it:
+tests/stress_out/
+tests/local_cache/
+tests/analyzer_test_env/
+tests/config_test_env/
+verifier_output.txt
+
+# --- IDEs ---
+.vscode/
+.idea/

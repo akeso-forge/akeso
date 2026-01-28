@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=64.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "akeso"
+version = "0.1.0"
+description = "Akeso OSS: High-fidelity Kubernetes manifest healing engine (Foundation for Kubecuro)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Nishar A Sunkesala", email = "akesoforge@outlook.com"}
+]
+keywords = ["kubernetes", "yaml", "devops", "sre", "akeso", "kubecuro"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+# External Dependencies
+dependencies = [
+    "ruamel.yaml>=0.17.21",
+    "rich>=12.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=22.0",
+    "mypy>=1.0",
+]
+
+# For creating the standalone binaries for Akeso OSS
+build = ["pyinstaller>=6.4.0"]
+
+# --- DUAL ENTRY POINTS ---
+# Both commands launch the same logic. 
+# engine.py uses AkesoBridge to detect which name was typed.
+[project.scripts]
+akeso = "akeso.cli.main:main"
+kubecuro = "akeso.cli.main:main"
+
+[project.urls]
+Homepage = "https://akeso.dev"
+Issues = "https://github.com/akeso-oss/akeso/issues"
+Repository = "https://github.com/akeso-oss/akeso.git"
+
+# --- SETUPTOOLS CONFIGURATION ---
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+# Explicitly exclude pro modules from OSS builds
+exclude = ["tests*", "catalog*", "akeso.pro*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+# Include the K8s catalogs in the distribution
+akeso = ["catalog/*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,124 @@
+"""
+CLI SHARED UTILITIES
+--------------------
+Common logic used across multiple CLI commands.
+"""
+
+import sys
+import platform
+import logging
+from rich.console import Console, Group
+from rich.table import Table
+from rich.panel import Panel
+from akeso.core.bridge import AkesoBridge, ProStatus
+from akeso.core.context import HealContext
+
+# Global UI Controller
+console = Console()
+formatter = None # Lazy loaded to avoid circular imports if needed
+
+# Constants
+CORE_VERSION = "0.1.0-stable"
+CATALOG_VERSION = "k8s-01.32-distilled"
+
+def get_console():
+    return console
+
+def add_standard_flags(sub):
+    """Helper to inject path arguments and search filters into sub-parsers."""
+    sub.add_argument("--kube-version", type=str, default=None, metavar="VERSION", dest="kube_version", help="Target K8s version (e.g., 1.28, v1.31)")
+    sub.add_argument("path", nargs="?")
+    sub.add_argument("--max-depth", type=int, default=10)
+    sub.add_argument("--ext", default=".yaml,.yml")
+    sub.add_argument("-h", "--help", action="store_true")
+    sub.add_argument("-s", "--summary-only", action="store_true",
+                    help="Show aggregate stats (recommended for 100+ files)")
+
+def print_custom_header(invoked_as: str, is_pro: bool):
+    """
+    Displays the top-level application banner.
+    """
+    console.print("")
+    if invoked_as == "kubecuro":
+        title = "💎 Kubecuro Enterprise"
+        subtitle = "Logic Diagnostics & YAML Auto-Healer"
+        border = "magenta"
+        if not is_pro:
+            subtitle += " (via Akeso OSS Foundation)"
+    else:
+        title = "🛡️ Akeso OSS"
+        subtitle = "High-Fidelity Kubernetes Manifest Healing"
+        border = "cyan"
+
+    banner_content = (
+        f"[bold]{title:^54}[/bold]\n"
+        f"[dim italic]{subtitle:^58}[/dim italic]"
+    )
+    
+    console.print(Panel(
+        banner_content, 
+        border_style=border, 
+        expand=False,
+    ))
+
+def print_version(invoked_as: str, is_pro: bool, cluster_version: str = None):
+    """
+    Displays system information panel.
+    """
+    tier = "Enterprise" if invoked_as == "kubecuro" else "OSS"
+    border_color = "magenta" if invoked_as == "kubecuro" else "cyan"
+    
+    sys_platform = f"{platform.system()} {platform.release()}"
+    sys_arch = platform.machine()
+    runtime_env = f"Python {platform.python_version()}"
+    
+    if not cluster_version:
+        cluster_version = HealContext._get_default_cluster_version()
+    
+    info_table = Table(box=None, show_header=False, padding=(0, 1))
+    info_table.add_column(width=18, justify="left")
+    info_table.add_column(justify="left")
+    
+    info_table.add_row("Client Version:", f"[bold white]{CORE_VERSION}[/bold white]")
+    info_table.add_row("Identity:", f"[bold {border_color}]{invoked_as.upper()}[/bold {border_color}] ({tier})")
+    
+    if is_pro:
+        badge, license_msg, color = AkesoBridge.get_pro_status_display()
+        info_table.add_row("License Status:", f"[{color}]{badge}[/{color}]")
+        info_table.add_row("", f"[dim]{license_msg}[/dim]")
+        
+        try:
+            from akeso.pro import license as pro_license
+            trial_status = pro_license.get_trial_status_display()
+            if "Trial" in trial_status:
+                console.print("\n[bold]Trial Usage:[/bold]")
+                console.print(trial_status)
+        except Exception:
+            pass
+    else:
+        info_table.add_row("License Status:", "[dim]Community/Unlicensed[/dim]")
+    
+    info_table.add_row("Catalog Schema:", f"[yellow]{CATALOG_VERSION}[/yellow]")
+    info_table.add_row("Target K8s:", f"[green]{cluster_version}[/green]")
+    info_table.add_row("Platform:", f"{sys_platform} ({sys_arch})")
+    info_table.add_row("Runtime:", f"{runtime_env}")
+    
+    tip_table = Table(box=None, show_header=False, padding=(1, 1, 0, 1))
+    tip_table.add_column()
+    
+    if not is_pro:
+        tip_text = "[bold]💡 Kubecuro Enterprise supports auto-detection from kubectl[/bold]"
+    else:
+        tip_text = "[dim]✨ Pro: Auto-detect cluster versions from kubectl/API[/dim]"
+    
+    tip_table.add_row(tip_text)
+
+    panel_group = Group(info_table, tip_table)
+
+    console.print(Panel(
+        panel_group, 
+        title=f"[bold]Operational Context[/bold]", 
+        border_style=border_color,
+        padding=(0, 2),
+        expand=False
+    ))

@@ -1,0 +1,17 @@
+defaults: &defaults
+  timeout: 30
+  retry: true
+  adapter: postgres
+
+development:
+  database: *defaults
+  timeout: 60  # Override
+
+staging:
+  <<: *defaults
+  adapter: mysql
+
+complex_list:
+  - &anchor1 first
+  - *anchor1
+  - second: *anchor1
