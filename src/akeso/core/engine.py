@@ -53,6 +53,7 @@ class AkesoEngine:
     def __init__(self, 
                  workspace_path: str, 
                  catalog_path: str,
+                 app_name: str = "akeso",  # New: Configurable Identity
                  cpu_limit: str = "500m", 
                  mem_limit: str = "512Mi",
                  default_namespace: str = "default",
@@ -62,14 +63,19 @@ class AkesoEngine:
                  cluster_version: Optional[str] = None):
         """
         Initializes the Akeso Engine with workspace and catalog.
+        
+        Args:
+            app_name: The brand identity (e.g. 'kubecuro' or 'akeso'). 
+                      Determines the hidden folder name (e.g. .kubecuro/).
         """
         self.workspace = Path(workspace_path).resolve()
         
-        # Initialize I/O Manager and Config Manager
-        self.fs = FileSystemManager(self.workspace)
+        # Initialize I/O Manager and Config Manager with Branding
+        self.app_name = app_name
+        self.fs = FileSystemManager(self.workspace, app_name=self.app_name)
         self.fs.ensure_workspace()
         
-        self.config = ConfigManager(self.workspace)
+        self.config = ConfigManager(self.workspace, app_name=self.app_name)
         
         # Use config threshold if not explicitly overridden, otherwise default
         self.health_threshold = health_threshold if health_threshold != 70 else self.config.health_threshold

@@ -40,25 +40,37 @@ class ConfigManager:
         }
     }
 
-    def __init__(self, workspace_root: Path):
+    def __init__(self, workspace_root: Path, app_name: str = "akeso"):
         self.workspace = workspace_root
+        self.app_name = app_name
         self.config = self.DEFAULT_CONFIG.copy()
         self._load_config()
 
     def _load_config(self):
-        """Attempts to load .akeso.yaml or .akeso.yml from workspace root."""
+        """
+        Attempts to load configuration from:
+        1. .<app_name>/config.yaml (Preferred)
+        2. .<app_name>.yaml (Root file)
+        3. .akeso.yaml (Fallback if branded differently)
+        """
         yaml = YAML(typ='safe')
-        possible_files = [".akeso.yaml", ".akeso.yml"]
         
-        for fname in possible_files:
-            config_path = self.workspace / fname
-            if config_path.exists():
+        # 1. State Directory Config
+        state_config = self.workspace / f".{self.app_name}" / "config.yaml"
+        
+        # 2. Root File Configs
+        possible_files = [state_config, self.workspace / f".{self.app_name}.yaml", self.workspace / ".akeso.yaml"]
+        
+        for path in possible_files:
+            if path.exists():
                 try:
-                    loaded = yaml.load(config_path)
+                    loaded = yaml.load(path)
                     if loaded:
                         self._merge_config(loaded)
-                    logger.info(f"Loaded configuration from {fname}")
+                    logger.info(f"Loaded configuration from {path.name}")
                     return
+                except Exception as e:
+                    logger.warning(f"Failed to parse {path.name}: {e}")
                 except Exception as e:
                     logger.warning(f"Failed to parse {fname}: {e}")
 

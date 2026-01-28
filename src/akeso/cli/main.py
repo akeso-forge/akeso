@@ -330,6 +330,7 @@ def main():
         engine = AkesoEngine(
             workspace_path=".", 
             catalog_path=final_catalog_path,
+            app_name="kubecuro",
             cluster_version=target_cluster_version 
         )
 

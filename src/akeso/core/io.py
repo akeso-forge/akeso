@@ -22,17 +22,28 @@ class FileSystemManager:
     Abstration layer for local file system operations.
     """
     
-    def __init__(self, workspace_root: Path):
+    def __init__(self, workspace_root: Path, app_name: str = "akeso"):
         self.workspace = workspace_root.resolve()
+        self.app_name = app_name
+        self.state_dir = self.workspace / f".{app_name}"
+        self.backup_dir = self.state_dir / "backups"
 
     def ensure_workspace(self):
-        """Creates workspace directory if missing."""
+        """Creates workspace and state directories if missing."""
         if not self.workspace.exists():
             try:
                 self.workspace.mkdir(parents=True, exist_ok=True)
                 logger.info(f"Created workspace: {self.workspace}")
             except Exception as e:
                 raise RuntimeError(f"Workspace creation failed: {e}")
+        
+        # Ensure hidden state dir exists
+        if not self.state_dir.exists():
+            self.state_dir.mkdir(exist_ok=True)
+            
+        # Ensure backup dir exists
+        if not self.backup_dir.exists():
+            self.backup_dir.mkdir(exist_ok=True)
 
     def read_text(self, path: Path) -> str:
         """Reads text file with BOM handling."""
@@ -48,7 +59,7 @@ class FileSystemManager:
             with open(temp_file, 'w', encoding='utf-8') as f:
                 f.write(content)
                 f.flush()
-                os.fsync(f.fileno())
+                # os.fsync(f.fileno()) # Disabled for performance in temp files
             
             os.replace(temp_file, target_path)
             
@@ -59,13 +70,32 @@ class FileSystemManager:
 
     def create_backup(self, target_path: Path) -> Path:
         """
-        Creates a unique backup file (file-1.akeso.backup).
-        Returns the path to the backup created.
+        Creates a centralized backup using the Mirror Strategy.
+        
+        Structure:
+        <workspace>/.kubecuro/backups/path/to/file-<timestamp>.yaml
         """
-        backup_path = target_path.with_suffix('.akeso.backup')
+        try:
+            rel_path = target_path.relative_to(self.workspace)
+        except ValueError:
+            # File is outside workspace? Flatten path to avoid errors
+            rel_path = Path(target_path.name)
+            
+        # Replicate directory structure inside backup folder
+        backup_dest_dir = self.backup_dir / rel_path.parent
+        backup_dest_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Add timestamp/counter to filename
+        import time
+        timestamp = int(time.time())
+        backup_name = f"{target_path.stem}.{timestamp}{target_path.suffix}"
+        backup_path = backup_dest_dir / backup_name
+        
+        # Collision safety
         counter = 1
         while backup_path.exists():
-            backup_path = target_path.with_name(f"{target_path.stem}-{counter}.akeso.backup")
+            backup_name = f"{target_path.stem}.{timestamp}-{counter}{target_path.suffix}"
+            backup_path = backup_dest_dir / backup_name
             counter += 1
             
         shutil.copy2(target_path, backup_path)
