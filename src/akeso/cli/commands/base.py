@@ -94,18 +94,18 @@ def print_custom_header(invoked_as: str, is_pro: bool):
         border = "cyan"
 
     from rich.align import Align
-    
-    banner_content = (
-        f"[bold]{title}[/bold]\n"
-        f"[dim italic]{subtitle}[/dim italic]"
-    )
-    
     from rich import box
     
+    # Create aligned content using Table
+    header_table = Table(box=None, show_header=False, padding=(0, 1), expand=False)
+    header_table.add_column(justify="center")
+    header_table.add_row(f"[bold]{title}[/bold]")
+    header_table.add_row(f"[dim italic]{subtitle}[/dim italic]")
+    
     console.print(Panel.fit(
-        Align.center(banner_content), 
+        header_table, 
         border_style=border, 
-        box=box.SQUARE,
+        box=box.ROUNDED,
         padding=(0, 2)
     ))
 
