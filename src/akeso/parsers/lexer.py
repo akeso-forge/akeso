@@ -576,6 +576,21 @@ class AkesoLexer:
             # Phase 1: Stateful flush-left repair
             working_line = self._fix_flush_left_lists_phase1(shards, original_line)
             
+            # Phase 1.5: Missing Colon Heuristic (Lookahead)
+            # Fixes: "spec" (newline) "  ports:" -> "spec:" (newline) "  ports:"
+            stripped = working_line.strip()
+            if stripped and stripped.replace("-", "").replace("_","").isalnum() and ":" not in stripped:
+                # Look ahead for indentation
+                if i + 1 < len(lines):
+                    next_line = lines[i+1]
+                    cur_indent = len(working_line) - len(working_line.lstrip())
+                    next_indent = len(next_line) - len(next_line.lstrip())
+                    
+                    if next_indent > cur_indent and next_line.strip():
+                        working_line = working_line.rstrip() + ":"
+                        self.repair_stats["spacing_fixes"] += 1
+                        logger.debug(f"Line {i+1}: Healed missing colon for parent key '{stripped}'")
+            
             # Structural repair (spacing, quotes, etc.)
             indent, code, comment, is_now_in_block = self.repair_line(working_line)
             
