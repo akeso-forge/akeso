@@ -65,17 +65,19 @@ class HealingPipeline:
                  catalog: Dict[Any, Any],
                  cpu_limit: str = "500m",
                  mem_limit: str = "512Mi",
-                 default_namespace: str = "default"):
+                 default_namespace: str = "default",
+                 app_name: str = "akeso"):
         """
         Initializes the pipeline with all healing components.
         Sets up Foundation (OSS) and attempts to link Enterprise (Pro) modules.
         """
         self.catalog = catalog
+        self.app_name = app_name
 
         # --- Foundation Components (OSS) ---
         self.lexer = KubeLexer()
         self.shadow = KubeShadow()
-        self.scanner = KubeScanner(catalog)
+        self.scanner = KubeScanner(catalog, app_name=app_name)
         self.structurer = KubeStructurer(catalog)
 
         # Initialize Analyzers

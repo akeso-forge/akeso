@@ -111,7 +111,8 @@ class AkesoEngine:
                 catalog=self.catalog,
                 cpu_limit=cpu_limit,
                 mem_limit=mem_limit,
-                default_namespace=default_namespace
+                default_namespace=default_namespace,
+                app_name=self.app_name
             )
             
             # Configure validator (if available)

@@ -57,47 +57,21 @@ class AkesoScanner:
     def __init__(self, 
                  catalog: Optional[Dict[Any, Any]] = None,
                  schema_type: str = "kubernetes",
+                 app_name: str = "akeso",
                  **schema_sources):
         """
         Initializes the scanner with schema catalog(s).
         
-        Future-Proof Design:
-        The scanner accepts multiple catalog sources to support hybrid schema
-        environments (K8s + OpenAPI + CRDs). This enables Akeso to expand beyond
-        Kubernetes without breaking existing code.
-        
         Args:
             catalog: Primary schema catalog (K8s core + CRDs)
             schema_type: Schema format type
-                - "kubernetes": Standard K8s manifests (default)
-                - "openapi": OpenAPI 3.0 specifications
-                - "mixed": Multiple schema types coexist
-            **schema_sources: Additional schema catalogs for future expansion
-                - openapi_catalog: OpenAPI 3.0 schema definitions
-                - crd_catalog: Custom Resource Definition catalog
-                - plugin_catalogs: User-provided schema plugins (list)
-        
-        Examples:
-            >>> # Current usage (K8s only)
-            >>> scanner = AkesoScanner(k8s_catalog)
-            
-            >>> # Future usage (with OpenAPI)
-            >>> scanner = AkesoScanner(
-            ...     k8s_catalog,
-            ...     schema_type="mixed",
-            ...     openapi_catalog=openapi_schemas
-            ... )
-            
-            >>> # Future usage (with CRD plugins)
-            >>> scanner = AkesoScanner(
-            ...     k8s_catalog,
-            ...     crd_catalog=custom_crds,
-            ...     plugin_catalogs=[prometheus_operator, istio_crds]
-            ... )
+            app_name: Name of the application (e.g. "kubecuro") for branding messages
+            **schema_sources: Additional schema catalogs
         """
         # Primary catalog (K8s core + standard CRDs)
         self.catalog = catalog or {}
         self.schema_type = schema_type
+        self.app_name = app_name.capitalize() # Ensure proper casing (Akeso/Kubecuro)
         
         # Future expansion: Additional schema sources
         self.openapi_catalog = schema_sources.get('openapi_catalog', {})
@@ -143,6 +117,58 @@ class AkesoScanner:
             logger.info("Scanner initialized in PRO mode (intelligent repair enabled)")
         else:
             logger.info("Scanner initialized in OSS mode (strict validation)")
+
+    # ... [Skipping unchanged methods] ...
+
+    def _filter_identities_oss(self) -> List[ManifestIdentity]:
+        """
+        OSS mode: Strict validation filter.
+        
+        Requirements:
+        - BOTH kind AND apiVersion must be present
+        - Aligns with Kubernetes API Server requirements
+        - Provides clear error messages for missing fields
+        
+        Returns:
+            List[ManifestIdentity]: Identities with both kind and apiVersion
+        """
+        valid_ids = []
+        skipped_count = 0
+        
+        for idnt in self.identities:
+            # Strict check: BOTH required
+            if idnt.kind and idnt.api_version:
+                valid_ids.append(idnt)
+            else:
+                skipped_count += 1
+                
+                # Clear error messages for debugging
+                if not idnt.kind and not idnt.api_version:
+                    logger.error(
+                        f"Document {idnt.doc_index}: Missing BOTH kind and apiVersion. "
+                        f"Skipping resource. (OSS mode requires both fields)"
+                    )
+                elif not idnt.kind:
+                    logger.error(
+                        f"Document {idnt.doc_index}: Missing 'kind' field "
+                        f"(apiVersion: {idnt.api_version}). Skipping resource. "
+                        f"Hint: Add 'kind: <ResourceType>' at root level."
+                    )
+                else:  # not idnt.api_version
+                    logger.error(
+                        f"Document {idnt.doc_index}: Missing 'apiVersion' field "
+                        f"(kind: {idnt.kind}). Skipping resource. "
+                        f"Hint: Add 'apiVersion: <version>' at root level. "
+                        f"(Upgrade to {self.app_name} Pro for auto-inference)"
+                    )
+        
+        if skipped_count > 0:
+            logger.warning(
+                f"OSS mode: Skipped {skipped_count} document(s) with missing identity fields. "
+                f"Upgrade to {self.app_name} Pro for intelligent apiVersion inference."
+            )
+        
+        return valid_ids
 
     # =========================================================================
     # PHASE 3: LEXER METADATA INTEGRATION
@@ -541,13 +567,13 @@ class AkesoScanner:
                         f"Document {idnt.doc_index}: Missing 'apiVersion' field "
                         f"(kind: {idnt.kind}). Skipping resource. "
                         f"Hint: Add 'apiVersion: <version>' at root level. "
-                        f"(Upgrade to Pro for auto-inference)"
+                        f"(Upgrade to {self.app_name} Pro for auto-inference)"
                     )
         
         if skipped_count > 0:
             logger.warning(
                 f"OSS mode: Skipped {skipped_count} document(s) with missing identity fields. "
-                f"Upgrade to Akeso Pro for intelligent apiVersion inference."
+                f"Upgrade to {self.app_name} Pro for intelligent apiVersion inference."
             )
         
         return valid_ids
