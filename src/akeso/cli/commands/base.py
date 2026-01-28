@@ -89,7 +89,8 @@ def print_custom_header(invoked_as: str, is_pro: bool):
         if not is_pro:
             subtitle += " (via Akeso OSS Foundation)"
     else:
-        title = "🛡️ Akeso OSS"
+        # Use simple shield (U+1F6E1) without variation selectors for consistent width
+        title = "🛡 Akeso OSS"
         subtitle = "High-Fidelity Kubernetes Manifest Healing"
         border = "cyan"
 
