@@ -281,6 +281,15 @@ def main():
             # Robust Resolution Strategy: Check multiple candidate locations
             candidates = []
             
+            # Debug: Print execution context
+            # console.print(f"[dim]Debug: __file__ = {os.path.abspath(__file__)}[/dim]")
+            
+            # 0. PyInstaller Bundle (sys._MEIPASS)
+            if getattr(sys, 'frozen', False):
+                # When running as single-file exe, content is unpacked to _MEIPASS
+                bundle_root = sys._MEIPASS
+                candidates.append(os.path.join(bundle_root, "akeso", "catalog", "k8s_v1_distilled.json"))
+
             # 1. Dev/Source Root (up 4 levels from cli/main.py)
             dev_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
             candidates.append(os.path.join(dev_root, "catalog", "k8s_v1_distilled.json"))
@@ -296,12 +305,13 @@ def main():
             fallback_path = None
             for p in candidates:
                 if os.path.isfile(p):
+                    # console.print(f"[dim]Debug: Found catalog at {p}[/dim]")
                     fallback_path = p
                     break
             
             if not fallback_path:
                 # If we can't find a bundled catalog, explicitly warn (but let Manager try cache)
-                logger.debug(f"Could not locate bundled catalog in {candidates}")
+                logger.warning(f"Could not locate bundled catalog. Checked: {candidates}")
                 # fallback_path remains None
             
         catalog_mgr = CatalogManager()
