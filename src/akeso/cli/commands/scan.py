@@ -22,21 +22,36 @@ def handle_scan_command(args, engine, formatter):
 
     start_time = time.time()
     
-    # Collect results
-    if args.path == "-":
-        # STDIN Mode
-        content = sys.stdin.read()
-        job_results = [engine.audit_stream(content, source_name="<stdin>")]
-    elif os.path.isfile(args.path):
-        result = engine.audit_and_heal_file(args.path, dry_run=is_dry)
-        job_results = [result]
-    else:
-        job_results = engine.batch_heal(
-            root_path=args.path, 
-            extensions=extensions, 
-            max_depth=args.max_depth,
-            dry_run=is_dry
-        )
+    start_time = time.time()
+    
+    # Collect results from all targets
+    job_results = []
+    
+    # Handle implicit "." if list is empty (should be caught by validation, but safe usage)
+    targets = args.path if args.path else ["."]
+    if args.path == [] and not sys.stdin.isatty():
+         # If no args but piped input, treat as stdin
+         targets = ["-"]
+
+    for target in targets:
+        if target == "-":
+            # STDIN Mode
+            content = sys.stdin.read()
+            job_results.append(engine.audit_stream(content, source_name="<stdin>"))
+        elif os.path.isfile(target):
+            result = engine.audit_and_heal_file(target, dry_run=is_dry)
+            job_results.append(result)
+        elif os.path.isdir(target):
+            batch_results = engine.batch_heal(
+                root_path=target, 
+                extensions=extensions, 
+                max_depth=args.max_depth,
+                dry_run=is_dry
+            )
+            job_results.extend(batch_results)
+        else:
+            console = get_console()
+            console.print(f"[yellow]⚠️  Skipping invalid path: {target}[/yellow]")
 
     # Handle Output Formats
     output_fmt = getattr(args, 'output', 'text')
@@ -57,7 +72,9 @@ def handle_scan_command(args, engine, formatter):
              
     else:
         # Standard Text/Table Output
-        if os.path.isfile(args.path):
+        
+        # Heuristic: If we only have 1 result, show detailed view
+        if len(job_results) == 1:
              result = job_results[0]
              formatter.display_report(result)
              
@@ -94,15 +111,25 @@ def handle_scan_command(args, engine, formatter):
                         console.print("\n[green]No changes proposed (files are healthy).[/green]")
             
     # Calculate Exit Code
-    # Fail if any file didn't meet threshold OR if changes are proposed
-    # For CI/CD linter, we usually want to fail if there are any violations (i.e. if it *would* change)
     files_with_issues = [j for j in job_results if not j.get("success") or (j.get("healed_content") and j.get("raw_content") != j.get("healed_content"))]
     exit_code = 1 if files_with_issues else 0
 
     if exit_code != 0 and output_fmt == "text":
         console = get_console()
-        if args.path != "-":
-            console.print(f"\n[bold]💡 Tip:[/bold] Run [cyan]akeso heal {args.path}[/cyan] to fix {len(files_with_issues)} detected issues.\n")
+        
+        # Check if stdin was used
+        is_stdin = (args.path == []) and (not sys.stdin.isatty())
+        if not is_stdin and "-" not in args.path:
+            # Construct a helpful heal command string
+            # If explicit paths provided, try to reuse them if short
+            if args.path and len(args.path) <= 3:
+                # Join simple paths
+                path_str = " ".join(args.path)
+                heal_cmd = f"akeso heal {path_str}"
+            else:
+                heal_cmd = "akeso heal <paths>"
+
+            console.print(f"\n[bold]💡 Tip:[/bold] Run [cyan]{heal_cmd}[/cyan] to fix {len(files_with_issues)} detected issues.\n")
         else:
             console.print(f"\n[bold yellow]⚠️  Found {len(files_with_issues)} issues in input stream.[/bold yellow]\n")
 

@@ -5,30 +5,30 @@ It identifies logical errors, deprecated APIs, and security risks—then fixes t
 
 ## 🚀 Installation
 
-### 1. Zero-Install (Python directly)
-If you have Python 3.8+ installed:
-```bash
-pip install -r requirements.txt
-python -m akeso.cli.main --help
-```
+### 1. Build & Install (Recommended)
+This method installs the binary to `~/.local/bin` (or `/usr/local/bin` if run with sudo) so you can run `akeso` from anywhere.
 
-### 2. Autocompletion Setup (Recommended)
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Build & Auto-Install
+python3 build.py
+```
+*Note: Ensure `~/.local/bin` is in your `$PATH`.*
+
+### 2. Autocompletion Setup
 Enable tab-completion for commands and flags:
+
+**Bash / Zsh:**
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+source <(akeso completion bash)
+```
 
 **PowerShell:**
 ```powershell
 akeso completion powershell | Out-String | Invoke-Expression
-```
-
-**Bash (Linux):**
-```bash
-source <(akeso completion bash)
-```
-
-**Zsh (Mac):**
-```zsh
-autoload -U +X bashcompinit && bashcompinit
-source <(akeso completion zsh)
 ```
 
 ---
@@ -47,42 +47,52 @@ This tool has two modes depending on how you call it:
 
 ## 🛠️ Core Commands
 
-### 1. Initialize Project
-Create a default configuration file (`.akeso.yaml`):
-```bash
-akeso init
-```
+### 1. Scan (Read-Only)
+Audit your manifests without making changes.
+*   **Default Behavior:** Returns `Exit Code 1` if issues are found.
+*   **Multi-Target:** Can scan specific files, directories, or a mix of both.
 
-### 2. Scan (Read-Only)
-Audit your manifests without making changes. Returns `Exit Code 1` if issues found.
 ```bash
-# Scan a directory
-akeso scan ./k8s-manifests
+# Scan current directory (Implicit recursive)
+akeso scan .
 
-# Scan with visual diffs (Preview fixes)
-akeso scan ./k8s-manifests --diff
+# Scan specific files
+akeso scan deployment.yaml service.yaml
+
+# Mixed mode (Files & Dirs) - Batch Reporting
+akeso scan ./prod-manifests/ ./new-service.yaml
 
 # Scan from stdin (CI/CD pipeline)
 cat deployment.yaml | akeso scan -
 ```
 
-### 3. Heal (Fix Issues)
+**Report Modes:**
+*   **Detailed View:** Automatically shown when scanning a single file.
+*   **Summary Table:** Automatically shown when scanning multiple targets.
+
+### 2. Heal (Fix Issues)
 Automatically repair syntax, logic, and style issues.
 
 ```bash
-# Preview changes (Dry Run) - Returns Exit Code 1 if changes needed
-akeso heal ./k8s-manifests --dry-run
+# Interactive Mode (Single File) - Shows diff & asks for confirmation
+akeso heal deployment.yaml
 
-# Interactive Mode (Safe) - Asks for confirmation
-akeso heal ./k8s-manifests
+# Batch Mode (Multi-Target) - Global Confirmation
+akeso heal ./manifests/ file1.yaml file2.yaml
 
-# Automated Mode (CI/CD) - Force apply changes
-akeso heal ./k8s-manifests --yes-all
+# Dry Run (Preview changes without writing)
+akeso heal . --dry-run
 ```
 
 **Safety Interlocks:**
-*   **Single File:** Shows a side-by-side diff and asks `Apply changes? [y/N]`
-*   **Directory:** Requires you to type `CONFIRM` to proceed.
+*   **Interactive Mode:** Used when healing a single file. Shows visual diff. Defaults to "No".
+*   **Batch Mode:** Used when healing multiple files or directories. Shows summary table. Requires typing `CONFIRM`.
+
+### 3. Initialize Project
+Create a default configuration file (`.akeso.yaml`):
+```bash
+akeso init
+```
 
 ### 4. Explain Rules
 Get detailed documentation for any violation ID.
@@ -107,11 +117,11 @@ ignore:
 
 ## 🆘 Troubleshooting
 
-**Q: I see "Command not found"**
-A: Ensure the `src` directory is in your `PYTHONPATH` or run via `python -m akeso.cli.main`.
+**Q: "Missing Required Argument: path"**
+A: `akeso scan` and `akeso heal` are strict. You must specify a target (e.g., `akeso scan .`).
 
 **Q: My CI pipeline passes even when files are broken?**
-A: Ensure you are using `akeso scan` (which now correctly returns Exit Code 1 on failure).
+A: Ensure you are using `akeso scan`, which returns Exit Code 1 on failure.
 
 **Q: How do I upgrade to Pro?**
 A: Run `akeso auth --login <LICENSE_KEY>` to activate Kubecuro Enterprise features.

@@ -26,10 +26,24 @@ def handle_heal_command(args, engine, formatter, is_pro: bool):
 
     from akeso.ui.diff import DiffEngine
 
-    if os.path.isfile(args.path):
+    if not args.path:
+        return 1 # Should rely on validation, but safety check
+
+    targets = args.path
+    
+    # Determine execution mode
+    # Use Batch Mode if: Multiple targets OR the single target is a directory
+    is_batch_mode = len(targets) > 1 or (len(targets) == 1 and os.path.isdir(targets[0]))
+
+    if not is_batch_mode:
+        target_file = targets[0]
+        if not os.path.exists(target_file):
+            console.print(f"[red]❌ File not found: {target_file}[/red]")
+            return 1
+
         # SINGLE FILE MODE: Interactive Diff -> Confirm -> Write
         # First, run in dry-run mode to get the proposed changes
-        result = engine.audit_and_heal_file(args.path, dry_run=True)
+        result = engine.audit_and_heal_file(target_file, dry_run=True)
         
         # Calculate diff if changed
         # Accessing dict keys, not attributes
@@ -38,7 +52,7 @@ def handle_heal_command(args, engine, formatter, is_pro: bool):
              if not original_content:
                  # Fallback to reading disk if raw_content missing
                  try:
-                    with open(args.path, 'r', encoding='utf-8') as f:
+                    with open(target_file, 'r', encoding='utf-8') as f:
                         original_content = f.read()
                  except: pass
              
@@ -46,7 +60,7 @@ def handle_heal_command(args, engine, formatter, is_pro: bool):
              
              # Show Diff
              if not getattr(args, 'quiet', False):
-                 DiffEngine.render_diff(original_content, healed_content, args.path)
+                 DiffEngine.render_diff(original_content, healed_content, target_file)
              
              if is_dry:
                  console.print("[dim yellow]Dry-run: No changes written.[/dim yellow]")
@@ -56,32 +70,39 @@ def handle_heal_command(args, engine, formatter, is_pro: bool):
                  
              if not auto_yes:
                  # Interactive Prompt
-                 confirm = console.input(f"\n[bold yellow]Apply changes to {args.path}? [y/N]: [/bold yellow]")
+                 confirm = console.input(f"\n[bold yellow]Apply changes to {target_file}? [y/N]: [/bold yellow]")
                  if confirm.lower() != 'y':
                      console.print("[red]Aborted.[/red]")
                      return 0
             
              # Actually Write
-             final_result = engine.audit_and_heal_file(args.path, dry_run=False)
+             final_result = engine.audit_and_heal_file(target_file, dry_run=False)
              formatter.display_report(final_result)
              job_results = [final_result]
 
         else:
              # No changes needed
-             console.print(f"[green]No changes required for {args.path}[/green]")
+             console.print(f"[green]No changes required for {target_file}[/green]")
              job_results = [result]
 
     else:
         # BATCH MODE: Scan -> Summary -> Diffs -> "CONFIRM" -> Write
-        console.print(f"[bold cyan]Scanning directory: {args.path}...[/bold cyan]")
+        console.print(f"[bold cyan]Scanning {len(targets)} targets...[/bold cyan]")
         
         # 1. First Pass: Dry Run
-        job_results = engine.batch_heal(
-            root_path=args.path, 
-            extensions=extensions, 
-            max_depth=args.max_depth,
-            dry_run=True
-        )
+        job_results = []
+        for target in targets:
+            if os.path.isfile(target):
+                job_results.append(engine.audit_and_heal_file(target, dry_run=True))
+            elif os.path.isdir(target):
+                job_results.extend(engine.batch_heal(
+                    root_path=target, 
+                    extensions=extensions, 
+                    max_depth=args.max_depth,
+                    dry_run=True
+                ))
+            else:
+                console.print(f"[yellow]Skipping invalid target: {target}[/yellow]")
         
         # Filter for actual changes. 
         # Check logic: raw != healed AND success
@@ -123,12 +144,17 @@ def handle_heal_command(args, engine, formatter, is_pro: bool):
         # 2. Second Pass: Actual Write
         console.print("[green]Applying repairs...[/green]")
         
-        final_results = engine.batch_heal(
-            root_path=args.path, 
-            extensions=extensions, 
-            max_depth=args.max_depth,
-            dry_run=False
-        )
+        final_results = []
+        for target in targets:
+            if os.path.isfile(target):
+                final_results.append(engine.audit_and_heal_file(target, dry_run=False))
+            elif os.path.isdir(target):
+                 final_results.extend(engine.batch_heal(
+                    root_path=target, 
+                    extensions=extensions, 
+                    max_depth=args.max_depth,
+                    dry_run=False
+                 ))
         
         # Check for genuine errors
         failures = [j for j in final_results if j.get("status") in ["ENGINE_ERROR", "SECURITY_ERROR"]]

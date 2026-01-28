@@ -203,17 +203,17 @@ def main():
         print_custom_header(invoked_as, is_pro)
         
         if args.command == "scan":
-            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} scan <path>[/bold white] [options]")
+            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} scan <targets...>[/bold white] [options]")
             console.print("\n[bold cyan]OPTIONS[/bold cyan]")
-            console.print("  path                File or directory to audit")
+            console.print("  targets             File(s) or directory(s) to audit")
             console.print("  --output FORMAT     Report format (text, json, sarif)")
             console.print("  --ext LIST          Extensions to scan (default: .yaml,.yml)")
             console.print("  --max-depth N       Recursion depth (default: 10)")
             
         elif args.command == "heal":
-            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} heal <path>[/bold white] [options]")
+            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} heal <targets...>[/bold white] [options]")
             console.print("\n[bold cyan]OPTIONS[/bold cyan]")
-            console.print("  path                File or directory to heal")
+            console.print("  targets             File(s) or directory(s) to heal")
             console.print("  --dry-run           Show proposed changes without writing")
             console.print("  -y, --yes           Auto-confirm single file healing")
             console.print("  --yes-all           Auto-confirm batch healing (Use with caution)")
@@ -253,10 +253,11 @@ def main():
     try:
         # Pre-Validation (Before spinning up engine)
         if args.command == "scan":
-            if not validate_required_arg(args.path, "path", "scan", [f"{invoked_as} scan .", f"{invoked_as} scan <target-folder>"]):
+            if not validate_required_arg(args.path, "path", "scan", [f"{invoked_as} scan .", f"{invoked_as} scan <path-to-file-or-dir>"]):
                 sys.exit(1)
         elif args.command == "heal":
-            if not validate_required_arg(args.path, "path", "heal", [f"{invoked_as} heal .", f"{invoked_as} heal -y <target-folder>"]):
+            # Heal usage suggestion should be safe (interactive by default)
+            if not validate_required_arg(args.path, "path", "heal", [f"{invoked_as} heal .", f"{invoked_as} heal <path-to-file-or-dir>"]):
                 sys.exit(1)
 
         if target_cluster_version:
