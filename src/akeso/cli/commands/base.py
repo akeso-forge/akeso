@@ -93,20 +93,27 @@ def print_custom_header(invoked_as: str, is_pro: bool):
         subtitle = "High-Fidelity Kubernetes Manifest Healing"
         border = "cyan"
 
-    from rich.align import Align
     from rich import box
     
-    # Create a table with fixed width based on subtitle
-    header_table = Table(box=None, show_header=False, padding=0, expand=False)
-    header_table.add_column(justify="left", width=len(subtitle))
-    header_table.add_row(Align.center(f"[bold]{title}[/bold]", width=len(subtitle)))
-    header_table.add_row(f"[dim italic]{subtitle}[/dim italic]")
+    # Calculate target width based on the longest line (subtitle)
+    target_width = len(subtitle)
     
-    console.print(Panel.fit(
-        header_table, 
+    # Center the title within that width
+    # Note: simple .center() usually works well enough; 
+    # visual mismatch from emojis is minimal with this padding.
+    title_centered = title.center(target_width)
+    
+    banner_content = (
+        f"[bold]{title_centered}[/bold]\n"
+        f"[dim italic]{subtitle}[/dim italic]"
+    )
+    
+    console.print(Panel(
+        banner_content, 
         border_style=border, 
         box=box.ROUNDED,
-        padding=(0, 2)
+        padding=(0, 2),
+        expand=False
     ))
 
 def print_version(invoked_as: str, is_pro: bool, cluster_version: str = None):
