@@ -257,12 +257,14 @@ class AkesoEngine:
             # =====================================================================
             # ATOMIC WRITE WITH BACKUP
             # =====================================================================
+            # =====================================================================
+            # ATOMIC WRITE WITH BACKUP
+            # =====================================================================
             if not dry_run and should_apply:
-                backup_path = self._create_unique_backup(full_path)
-                shutil.copy2(full_path, backup_path)
+                backup_path = self.fs.create_backup(full_path)
                 result["backup_created"] = str(backup_path.relative_to(self.workspace))
                 
-                self._atomic_write(full_path, healed_text)
+                self.fs.atomic_write(full_path, healed_text)
                 result["written"] = True
                 logger.info(f"Healed and saved: {relative_path}")
 
@@ -431,57 +433,6 @@ class AkesoEngine:
         if dry: 
             return "PREVIEW"
         return "HEALED" if meets_threshold else "FAILED"
-
-    def _atomic_write(self, target_path: Path, content: str):
-        """
-        Atomically writes content to file with fsync for durability.
-        
-        Uses temp file + os.replace for atomic operation.
-        Prevents partial writes during crashes.
-        
-        Args:
-            target_path: Destination file path
-            content: Content to write
-            
-        Raises:
-            IOError: If write fails
-        """
-        temp_file = target_path.with_suffix('.akeso.tmp')
-        try:
-            # Write to temp file with explicit flush and fsync
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-                f.flush()
-                os.fsync(f.fileno())  # Force OS to write to disk
-            
-            # Atomically replace original file
-            os.replace(temp_file, target_path)
-            
-        except Exception as e:
-            # Clean up temp file on failure
-            if temp_file.exists(): 
-                temp_file.unlink()
-            raise IOError(f"Atomic write failed: {str(e)}")
-
-    def _create_unique_backup(self, target_path: Path) -> Path:
-        """
-        Creates a unique backup file path (avoids overwriting existing backups).
-        
-        Args:
-            target_path: Original file path
-            
-        Returns:
-            Unique backup file path
-        """
-        backup_path = target_path.with_suffix('.akeso.backup')
-        counter = 1
-        
-        # Increment counter until we find an unused filename
-        while backup_path.exists():
-            backup_path = target_path.with_name(f"{target_path.stem}-{counter}.akeso.backup")
-            counter += 1
-        
-        return backup_path
 
     def _file_error(self, 
                     path: str, 
