@@ -102,11 +102,10 @@ def print_custom_header(invoked_as: str, is_pro: bool):
     
     from rich import box
     
-    console.print(Panel(
+    console.print(Panel.fit(
         Align.center(banner_content), 
         border_style=border, 
         box=box.SQUARE,
-        expand=False,
         padding=(0, 2)
     ))
 
@@ -164,10 +163,9 @@ def print_version(invoked_as: str, is_pro: bool, cluster_version: str = None):
 
     panel_group = Group(info_table, tip_table)
 
-    console.print(Panel(
+    console.print(Panel.fit(
         panel_group, 
         title=f"[bold]Operational Context[/bold]", 
         border_style=border_color,
-        padding=(0, 2),
-        expand=False
+        padding=(0, 2)
     ))
