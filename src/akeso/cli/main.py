@@ -208,17 +208,17 @@ def main():
         print_custom_header(invoked_as, is_pro)
         
         if args.command == "scan":
-            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} scan <targets...>[/bold white] [options]")
+            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} scan <target...>[/bold white] [options]")
             console.print("\n[bold cyan]OPTIONS[/bold cyan]")
-            console.print("  targets             File(s) or directory(s) to audit")
+            console.print("  target              File(s) or directory(s) to audit")
             console.print("  --output FORMAT     Report format (text, json, sarif)")
             console.print("  --ext LIST          Extensions to scan (default: .yaml,.yml)")
             console.print("  --max-depth N       Recursion depth (default: 10)")
             
         elif args.command == "heal":
-            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} heal <targets...>[/bold white] [options]")
+            console.print(f"\n[bold green]USAGE:[/bold green] [bold white]{invoked_as} heal <target...>[/bold white] [options]")
             console.print("\n[bold cyan]OPTIONS[/bold cyan]")
-            console.print("  targets             File(s) or directory(s) to heal")
+            console.print("  target              File(s) or directory(s) to heal")
             console.print("  --dry-run           Show proposed changes without writing")
             console.print("  -y, --yes           Auto-confirm single file healing")
             console.print("  --yes-all           Auto-confirm batch healing (Use with caution)")

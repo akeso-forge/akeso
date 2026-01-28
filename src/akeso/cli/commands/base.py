@@ -27,7 +27,7 @@ def get_console():
 def add_standard_flags(sub):
     """Helper to inject path arguments and search filters into sub-parsers."""
     sub.add_argument("--kube-version", type=str, default=None, metavar="VERSION", dest="kube_version", help="Target K8s version (e.g., 1.28, v1.31)")
-    sub.add_argument("path", nargs="*", help="One or more files or directories")
+    sub.add_argument("path", nargs="*", metavar="TARGET", help="File(s) or directory(s) to process")
     sub.add_argument("--max-depth", type=int, default=10)
     sub.add_argument("--ext", default=".yaml,.yml")
     sub.add_argument("-h", "--help", action="store_true")
